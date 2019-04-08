@@ -25,8 +25,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a AttnGAN network')
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
-                        default='cfg/bird_attn2.yml', type=str)
-    parser.add_argument('--gpu', dest='gpu_id', type=int, default=-1)
+                        default='cfg/coco_attn2.yml', type=str)
+    parser.add_argument('--gpu', dest='gpu_id', type=int, default=0)
     parser.add_argument('--data_dir', dest='data_dir', type=str, default='')
     parser.add_argument('--manualSeed', type=int, help='manual seed')
     args = parser.parse_args()
@@ -84,19 +84,9 @@ def gen_example(wordtoix, algo):
 
 
 if __name__ == "__main__":
+    
     args = parse_args()
-    if args.cfg_file is not None:
-        cfg_from_file(args.cfg_file)
-
-    if args.gpu_id != -1:
-        cfg.GPU_ID = args.gpu_id
-    else:
-        cfg.CUDA = False
-
-    if args.data_dir != '':
-        cfg.DATA_DIR = args.data_dir
-    print('Using config:')
-    pprint.pprint(cfg)
+    
 
     if not cfg.TRAIN.FLAG:
         args.manualSeed = 100
