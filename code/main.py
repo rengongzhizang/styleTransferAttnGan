@@ -86,7 +86,7 @@ def gen_example(wordtoix, algo):
 if __name__ == "__main__":
     
     args = parse_args()
-    
+    print(args)
 
     if not cfg.TRAIN.FLAG:
         args.manualSeed = 100
