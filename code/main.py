@@ -132,7 +132,7 @@ if __name__ == "__main__":
         algo.train()
     else:
         '''generate images from pre-extracted embeddings'''
-        if cfg.B_VALIDATION:
+        if cfg['B_VALIDATION']:
             algo.sampling(split_dir)  # generate images for the whole valid dataset
         else:
             gen_example(dataset.wordtoix, algo)  # generate images for customized /
