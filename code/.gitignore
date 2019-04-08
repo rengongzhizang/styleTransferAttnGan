@@ -1,2 +1,4 @@
 *.pyc
 !.gitignore
+coco/
+style_dataset/
