@@ -97,7 +97,7 @@ class TextDataset(data.Dataset):
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         self.target_transform = target_transform
-        self.embeddings_num = cfg.TEXT.CAPTIONS_PER_IMAGE
+        self.embeddings_num = CONFIG[TEXT.CAPTIONS_PER_IMAGE
 
         self.imsize = []
         for i in range(cfg.TREE.BRANCH_NUM):

@@ -1,8 +1,9 @@
 from __future__ import print_function
 
-from miscc.config import cfg, cfg_from_file
+
 from datasets import TextDataset
 from trainer import condGANTrainer as trainer
+from config import CONFIG
 
 import os
 import sys
@@ -86,53 +87,56 @@ def gen_example(wordtoix, algo):
 if __name__ == "__main__":
     
     args = parse_args()
-    cfg = cfg_from_file('cfg/coco_attn2.yml')
+    
+    
 
-    if not cfg.TRAIN.FLAG:
+    if not CONFIG['TRAIN']['FLAG']:
         args.manualSeed = 100
     elif args.manualSeed is None:
         args.manualSeed = random.randint(1, 10000)
     random.seed(args.manualSeed)
     np.random.seed(args.manualSeed)
     torch.manual_seed(args.manualSeed)
-    if cfg.CUDA:
+    if CONFIG['CUDA']:
         torch.cuda.manual_seed_all(args.manualSeed)
 
     now = datetime.datetime.now(dateutil.tz.tzlocal())
     timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
-    output_dir = '../output/%s_%s_%s' % \
-        (cfg.DATASET_NAME, cfg.CONFIG_NAME, timestamp)
+        output_dir = '../output/%s_%s_%s' % \
+        (CONFIG['DATASET_NAME'], CONFIG['CONFIG_NAME'], timestamp)
 
     split_dir, bshuffle = 'train', True
-    if not cfg.TRAIN.FLAG:
+    if not CONFIG['TRAIN']['FLAG']:
         # bshuffle = False
         split_dir = 'test'
 
     # Get data loader
-    imsize = cfg.TREE.BASE_SIZE * (2 ** (cfg.TREE.BRANCH_NUM - 1))
+    imsize = CONFIG['TREE']['BASE_SIZE'] * (2 ** (CONFIG['TREE.BRANCH_NUM'] - 1))
     image_transform = transforms.Compose([
         transforms.Scale(int(imsize * 76 / 64)),
         transforms.RandomCrop(imsize),
         transforms.RandomHorizontalFlip()])
-    dataset = TextDataset(cfg.DATA_DIR, split_dir,
-                          base_size=cfg.TREE.BASE_SIZE,
+    dataset = TextDataset(CONFIG['DATA_DIR'], split_dir,
+                          base_size=CONFig['TREE']['BASE_SIZE'],
                           transform=image_transform)
     assert dataset
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=cfg.TRAIN.BATCH_SIZE,
-        drop_last=True, shuffle=bshuffle, num_workers=int(cfg.WORKERS))
+        dataset, batch_size=CONFIG['TRAIN.BATCH_SIZE'],
+        drop_last=True, shuffle=bshuffle, num_workers=int(CONFIG['WORKERS']))
 
     # Define models and go to train/evaluate
     algo = trainer(output_dir, dataloader, dataset.n_words, dataset.ixtoword)
 
     start_t = time.time()
-    if cfg.TRAIN.FLAG:
+    if CONFIG['TRAIN']['FLAG']:
         algo.train()
     else:
         '''generate images from pre-extracted embeddings'''
         if cfg.B_VALIDATION:
             algo.sampling(split_dir)  # generate images for the whole valid dataset
         else:
-            gen_example(dataset.wordtoix, algo)  # generate images for customized captions
-    end_t = time.time()
+            gen_example(dataset.wordtoix, algo)  # generate images for customized /
+            
+        |}
+        {";lop   end_t = time.time()
     print('Total time for training:', end_t - start_t)

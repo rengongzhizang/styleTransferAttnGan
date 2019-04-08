@@ -300,10 +300,10 @@ class CA_NET(nn.Module):
 
 
 class INIT_STAGE_G(nn.Module):
-    def __init__(self, ngf, ncf):
+    def __init__(self, ngf, ncf, nsf):
         super(INIT_STAGE_G, self).__init__()
         self.gf_dim = ngf
-        self.in_dim = cfg.GAN.Z_DIM + ncf  # cfg.TEXT.EMBEDDING_DIM
+        self.in_dim = cfg.GAN.Z_DIM + ncf + nsf  # cfg.TEXT.EMBEDDING_DIM
 
         self.define_module()
 
@@ -319,13 +319,13 @@ class INIT_STAGE_G(nn.Module):
         self.upsample3 = upBlock(ngf // 4, ngf // 8)
         self.upsample4 = upBlock(ngf // 8, ngf // 16)
 
-    def forward(self, z_code, c_code):
+    def forward(self, s_code, z_code, c_code):
         """
         :param z_code: batch x cfg.GAN.Z_DIM
         :param c_code: batch x cfg.TEXT.EMBEDDING_DIM
         :return: batch x ngf/16 x 64 x 64
         """
-        c_z_code = torch.cat((c_code, z_code), 1)
+        c_z_code = torch.cat((c_code, z_code, s_code), 1) # cat a style code
         # state size ngf x 4 x 4
         out_code = self.fc(c_z_code)
         out_code = out_code.view(-1, self.gf_dim, 4, 4)
@@ -400,10 +400,11 @@ class G_NET(nn.Module):
         ngf = cfg.GAN.GF_DIM
         nef = cfg.TEXT.EMBEDDING_DIM
         ncf = cfg.GAN.CONDITION_DIM
+        nsf = cfg.GAN.SF_DIM
         self.ca_net = CA_NET()
 
         if cfg.TREE.BRANCH_NUM > 0:
-            self.h_net1 = INIT_STAGE_G(ngf * 16, ncf)
+            self.h_net1 = INIT_STAGE_G(ngf * 16, ncf, nsf)
             self.img_net1 = GET_IMAGE_G(ngf)
         # gf x 64 x 64
         if cfg.TREE.BRANCH_NUM > 1:
@@ -413,7 +414,7 @@ class G_NET(nn.Module):
             self.h_net3 = NEXT_STAGE_G(ngf, nef, ncf)
             self.img_net3 = GET_IMAGE_G(ngf)
 
-    def forward(self, z_code, sent_emb, word_embs, mask):
+    def forward(self, s_code, z_code, sent_emb, word_embs, mask):
         """
             :param z_code: batch x cfg.GAN.Z_DIM
             :param sent_emb: batch x cfg.TEXT.EMBEDDING_DIM
@@ -426,7 +427,7 @@ class G_NET(nn.Module):
         c_code, mu, logvar = self.ca_net(sent_emb)
 
         if cfg.TREE.BRANCH_NUM > 0:
-            h_code1 = self.h_net1(z_code, c_code)
+            h_code1 = self.h_net1(s_code, z_code, c_code)
             fake_img1 = self.img_net1(h_code1)
             fake_imgs.append(fake_img1)
         if cfg.TREE.BRANCH_NUM > 1:
@@ -466,7 +467,7 @@ class G_DCGAN(nn.Module):
             self.h_net3 = NEXT_STAGE_G(ngf, nef, ncf)
         self.img_net = GET_IMAGE_G(ngf)
 
-    def forward(self, z_code, sent_emb, word_embs, mask):
+    def forward(self, s_code, z_code, sent_emb, word_embs, mask):
         """
             :param z_code: batch x cfg.GAN.Z_DIM
             :param sent_emb: batch x cfg.TEXT.EMBEDDING_DIM
@@ -477,7 +478,7 @@ class G_DCGAN(nn.Module):
         att_maps = []
         c_code, mu, logvar = self.ca_net(sent_emb)
         if cfg.TREE.BRANCH_NUM > 0:
-            h_code = self.h_net1(z_code, c_code)
+            h_code = self.h_net1(s_code, z_code, c_code)
         if cfg.TREE.BRANCH_NUM > 1:
             h_code, att1 = self.h_net2(h_code, c_code, word_embs, mask)
             if att1 is not None:
@@ -533,9 +534,9 @@ def encode_image_by_16times(ndf):
     return encode_img
 
 
-class D_GET_LOGITS(nn.Module):
+class DC_GET_LOGITS(nn.Module):
     def __init__(self, ndf, nef, bcondition=False):
-        super(D_GET_LOGITS, self).__init__()
+        super(DC_GET_LOGITS, self).__init__()
         self.df_dim = ndf
         self.ef_dim = nef
         self.bcondition = bcondition
@@ -561,19 +562,47 @@ class D_GET_LOGITS(nn.Module):
         output = self.outlogits(h_c_code)
         return output.view(-1)
 
+class DS_GET_LOGITS(nn.Module):
+    def __init__(self, ndf, nsf, bcondition=False):
+        super(DS_GET_LOGITS, self).__init__()
+        self.df_dim = ndf
+        self.sf_dim = nsf
+        self.bcondition = bcondition
+        if self.bcondition:
+            self.jointConv = Block3x3_leakRelu(ndf * 8 + nsf, ndf * 8)
 
+        self.outlogits = nn.Sequential(
+            nn.Conv2d(ndf * 8, 1, kernel_size=4, stride=4),
+            nn.Sigmoid())
+
+    def forward(self, h_code, s_code=None):
+        if self.bcondition and s_code is not None:
+            # conditioning output
+            s_code = s_code.view(-1, self.sf_dim, 1, 1)
+            s_code = s_code.repeat(1, 1, 4, 4)
+            # state size (ngf+egf) x 4 x 4
+            h_s_code = torch.cat((h_code, s_code), 1)
+            # state size ngf x in_size x in_size
+            h_s_code = self.jointConv(h_s_code)
+        else:
+            h_s_code = h_code
+
+        output = self.outlogits(h_s_code)
+        return output.view(-1)
+
+# CONTEXT CONDITION
 # For 64 x 64 images
 class D_NET64(nn.Module):
     def __init__(self, b_jcu=True):
         super(D_NET64, self).__init__()
-        ndf = cfg.GAN.DF_DIM
+        ndf = cfg.GAN.DF_DIM       
         nef = cfg.TEXT.EMBEDDING_DIM
         self.img_code_s16 = encode_image_by_16times(ndf)
         if b_jcu:
-            self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False)
+            self.UNCOND_DNET = DC_GET_LOGITS(ndf, nef, bcondition=False)
         else:
             self.UNCOND_DNET = None
-        self.COND_DNET = D_GET_LOGITS(ndf, nef, bcondition=True)
+        self.CONDC_DNET = DC_GET_LOGITS(ndf, nef, bcondition=True)
 
     def forward(self, x_var):
         x_code4 = self.img_code_s16(x_var)  # 4 x 4 x 8df
@@ -591,10 +620,10 @@ class D_NET128(nn.Module):
         self.img_code_s32_1 = Block3x3_leakRelu(ndf * 16, ndf * 8)
         #
         if b_jcu:
-            self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False)
+            self.UNCOND_DNET = DC_GET_LOGITS(ndf, nef, bcondition=False)
         else:
             self.UNCOND_DNET = None
-        self.COND_DNET = D_GET_LOGITS(ndf, nef, bcondition=True)
+        self.COND_DNET = DC_GET_LOGITS(ndf, nef, bcondition=True)
 
     def forward(self, x_var):
         x_code8 = self.img_code_s16(x_var)   # 8 x 8 x 8df
@@ -615,10 +644,10 @@ class D_NET256(nn.Module):
         self.img_code_s64_1 = Block3x3_leakRelu(ndf * 32, ndf * 16)
         self.img_code_s64_2 = Block3x3_leakRelu(ndf * 16, ndf * 8)
         if b_jcu:
-            self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False)
+            self.UNCOND_DNET = DC_GET_LOGITS(ndf, nef, bcondition=False)
         else:
             self.UNCOND_DNET = None
-        self.COND_DNET = D_GET_LOGITS(ndf, nef, bcondition=True)
+        self.COND_DNET = DC_GET_LOGITS(ndf, nef, bcondition=True)
 
     def forward(self, x_var):
         x_code16 = self.img_code_s16(x_var)
@@ -627,3 +656,72 @@ class D_NET256(nn.Module):
         x_code4 = self.img_code_s64_1(x_code4)
         x_code4 = self.img_code_s64_2(x_code4)
         return x_code4
+
+
+# STYLE CONDITION
+# For 64 x 64 images
+class DS_NET64(nn.Module):
+    def __init__(self, b_jcu=True):
+        super(DS_NET64, self).__init__()
+        ndf = cfg.GAN.DF_DIM
+        nsf = cfg.GAN.SF_DIM 
+        self.img_code_s16 = encode_image_by_16times(ndf)
+        if b_jcu:
+            self.UNCOND_DNET = DS_GET_LOGITS(ndf, nsf, bcondition=False)
+        else:
+            self.UNCOND_DNET = None
+        self.CONDS_DNET = DS_GET_LOGITS(ndf, nsf, bcondition=True)
+
+    def forward(self, x_var):
+        x_code4 = self.img_code_s16(x_var)  # 4 x 4 x 8df
+        return x_code4
+
+
+# For 128 x 128 images
+class DS_NET128(nn.Module):
+    def __init__(self, b_jcu=True):
+        super(DS_NET128, self).__init__()
+        ndf = cfg.GAN.DF_DIM
+        nsf = cfg.GAN.SF_DIM 
+        self.img_code_s16 = encode_image_by_16times(ndf)
+        self.img_code_s32 = downBlock(ndf * 8, ndf * 16)
+        self.img_code_s32_1 = Block3x3_leakRelu(ndf * 16, ndf * 8)
+        #
+        if b_jcu:
+            self.UNCOND_DNET = DS_GET_LOGITS(ndf, nsf, bcondition=False)
+        else:
+            self.UNCOND_DNET = None
+        self.COND_DNET = DS_GET_LOGITS(ndf, nsf, bcondition=True)
+
+    def forward(self, x_var):
+        x_code8 = self.img_code_s16(x_var)   # 8 x 8 x 8df
+        x_code4 = self.img_code_s32(x_code8)   # 4 x 4 x 16df
+        x_code4 = self.img_code_s32_1(x_code4)  # 4 x 4 x 8df
+        return x_code4
+
+
+# For 256 x 256 images
+class DS_NET256(nn.Module):
+    def __init__(self, b_jcu=True):
+        super(DS_NET256, self).__init__()
+        ndf = cfg.GAN.DF_DIM
+        nsf = cfg.GAN.SF_DIM 
+        self.img_code_s16 = encode_image_by_16times(ndf)
+        self.img_code_s32 = downBlock(ndf * 8, ndf * 16)
+        self.img_code_s64 = downBlock(ndf * 16, ndf * 32)
+        self.img_code_s64_1 = Block3x3_leakRelu(ndf * 32, ndf * 16)
+        self.img_code_s64_2 = Block3x3_leakRelu(ndf * 16, ndf * 8)
+        if b_jcu:
+            self.UNCOND_DNET = DS_GET_LOGITS(ndf, nsf, bcondition=False)
+        else:
+            self.UNCOND_DNET = None
+        self.COND_DNET = DS_GET_LOGITS(ndf, nsf, bcondition=True)
+
+    def forward(self, x_var):
+        x_code16 = self.img_code_s16(x_var)
+        x_code8 = self.img_code_s32(x_code16)
+        x_code4 = self.img_code_s64(x_code8)
+        x_code4 = self.img_code_s64_1(x_code4)
+        x_code4 = self.img_code_s64_2(x_code4)
+        return x_code4
+
