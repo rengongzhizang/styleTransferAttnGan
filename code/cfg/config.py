@@ -1,15 +1,15 @@
 CONFIG = {'CONFIG_NAME': 'glu-gan2',
 
 'DATASET_NAME': 'coco',
-'DATA_DIR': '../coco/train2014/',
+'DATA_DIR': '../coco/',
 'GPU_ID': 0,
 'WORKERS': 4,
-'CUDA' = True,
-'B_VALIDATION' = False
+'CUDA' : True,
+'B_VALIDATION' : False,
 
 'TREE':{
     'BRANCH_NUM': 3,
-    'BASE_SIZE' : 3},
+    'BASE_SIZE' : 64},
 
 
 'TRAIN':{

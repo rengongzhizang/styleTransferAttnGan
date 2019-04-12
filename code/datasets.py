@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 
 from nltk.tokenize import RegexpTokenizer
 from collections import defaultdict
-from miscc.config import cfg
+from cfg.config import CONFIG
 
 import torch
 import torch.utils.data as data
@@ -14,17 +14,16 @@ from torch.autograd import Variable
 import torchvision.transforms as transforms
 
 import os
+import glob
 import sys
 import numpy as np
 import pandas as pd
 from PIL import Image
 import numpy.random as random
-if sys.version_info[0] == 2:
-    import cPickle as pickle
-else:
-    import pickle
-
-
+import pickle
+from miscc.config import cfg as cfg
+import json
+import re
 def prepare_data(data):
     imgs, captions, captions_lens, class_ids, keys = data
 
@@ -92,12 +91,13 @@ class TextDataset(data.Dataset):
     def __init__(self, data_dir, split='train',
                  base_size=64,
                  transform=None, target_transform=None):
+        # data_dir = coco
         self.transform = transform
         self.norm = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         self.target_transform = target_transform
-        self.embeddings_num = CONFIG[TEXT.CAPTIONS_PER_IMAGE
+        self.embeddings_num = CONFIG['TEXT']['CAPTIONS_PER_IMAGE']
 
         self.imsize = []
         for i in range(cfg.TREE.BRANCH_NUM):
@@ -110,6 +110,7 @@ class TextDataset(data.Dataset):
             self.bbox = self.load_bbox()
         else:
             self.bbox = None
+        # split_dir = coco/train
         split_dir = os.path.join(data_dir, split)
 
         self.filenames, self.captions, self.ixtoword, \
@@ -133,7 +134,7 @@ class TextDataset(data.Dataset):
         #
         filename_bbox = {img_file[:-4]: [] for img_file in filenames}
         numImgs = len(filenames)
-        for i in xrange(0, numImgs):
+        for i in range(0, numImgs):
             # bbox = [x-left, y-top, width, height]
             bbox = df_bounding_boxes.iloc[i][1:].tolist()
 
@@ -142,38 +143,45 @@ class TextDataset(data.Dataset):
         #
         return filename_bbox
 
-    def load_captions(self, data_dir, filenames):
+    def load_captions(self, data_dir, filenames, mode = 'train'):
         all_captions = []
+        path = data_dir + 'captions_train2014.json'
+        f = open(path, 'r')
+            
+        caption_dict = json.load(f)
+        cd = {}
+        for im in caption_dict['annotations']:
+            cd[im['image_id']] = im['caption']
+        
         for i in range(len(filenames)):
-            cap_path = '%s/text/%s.txt' % (data_dir, filenames[i])
-            with open(cap_path, "r") as f:
-                captions = f.read().decode('utf8').split('\n')
-                cnt = 0
-                for cap in captions:
-                    if len(cap) == 0:
-                        continue
-                    cap = cap.replace("\ufffd\ufffd", " ")
-                    # picks out sequences of alphanumeric characters as tokens
-                    # and drops everything else
-                    tokenizer = RegexpTokenizer(r'\w+')
-                    tokens = tokenizer.tokenize(cap.lower())
-                    # print('tokens', tokens)
-                    if len(tokens) == 0:
-                        print('cap', cap)
-                        continue
+            im_id = int(re.sub("[^0-9]", "", filenames[i])[-6:])
+            captions = cd[im_id].split()
+            cnt = 0
+            for cap in captions:
+                if len(cap) == 0:
+                    continue
+                cap = cap.replace("\ufffd\ufffd", " ")
+                # picks out sequences of alphanumeric characters as tokens
+                # and drops everything else
+                tokenizer = RegexpTokenizer(r'\w+')
+                tokens = tokenizer.tokenize(cap.lower())
+                # print('tokens', tokens)
+                if len(tokens) == 0:
+                    print('cap', cap)
+                    continue
 
-                    tokens_new = []
-                    for t in tokens:
-                        t = t.encode('ascii', 'ignore').decode('ascii')
-                        if len(t) > 0:
-                            tokens_new.append(t)
-                    all_captions.append(tokens_new)
-                    cnt += 1
-                    if cnt == self.embeddings_num:
-                        break
-                if cnt < self.embeddings_num:
-                    print('ERROR: the captions for %s less than %d'
-                          % (filenames[i], cnt))
+                tokens_new = []
+                for t in tokens:
+                    t = t.encode('ascii', 'ignore').decode('ascii')
+                    if len(t) > 0:
+                        tokens_new.append(t)
+                all_captions.append(tokens_new)
+                cnt += 1
+                if cnt == self.embeddings_num:
+                    break
+            if cnt < self.embeddings_num:
+                print('ERROR: the captions for %s less than %d'
+                        % (filenames[i], cnt))
         return all_captions
 
     def build_dictionary(self, train_captions, test_captions):
@@ -257,14 +265,9 @@ class TextDataset(data.Dataset):
         return class_id
 
     def load_filenames(self, data_dir, split):
-        filepath = '%s/%s/filenames.pickle' % (data_dir, split)
-        if os.path.isfile(filepath):
-            with open(filepath, 'rb') as f:
-                filenames = pickle.load(f)
-            print('Load filenames from: %s (%d)' % (filepath, len(filenames)))
-        else:
-            filenames = []
-        return filenames
+        cwd = os.getcwd()
+        path = os.path.join(data_dir, split) + '/' + '*.jpg'
+        return glob.glob(path)
 
     def get_caption(self, sent_ix):
         # a list of indices for a sentence

@@ -22,18 +22,6 @@ dir_path = (os.path.abspath(os.path.join(os.path.realpath(__file__), './.')))
 sys.path.append(dir_path)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Train a AttnGAN network')
-    parser.add_argument('--cfg', dest='cfg_file',
-                        help='optional config file',
-                        default='cfg/coco_attn2.yml', type=str)
-    parser.add_argument('--gpu', dest='gpu_id', type=int, default=0)
-    parser.add_argument('--data_dir', dest='data_dir', type=str, default='')
-    parser.add_argument('--manualSeed', type=int, help='manual seed')
-    args = parser.parse_args()
-    return args
-
-
 def gen_example(wordtoix, algo):
     '''generate images from example sentences'''
     from nltk.tokenize import RegexpTokenizer
@@ -83,51 +71,39 @@ def gen_example(wordtoix, algo):
             data_dic[key] = [cap_array, cap_lens, sorted_indices]
     algo.gen_example(data_dic)
 
+def main():
+    seed = 485
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
-if __name__ == "__main__":
-    
-    args = parse_args()
-    
-    
-
-    if not CONFIG['TRAIN']['FLAG']:
-        args.manualSeed = 100
-    elif args.manualSeed is None:
-        args.manualSeed = random.randint(1, 10000)
-    random.seed(args.manualSeed)
-    np.random.seed(args.manualSeed)
-    torch.manual_seed(args.manualSeed)
     if CONFIG['CUDA']:
-        torch.cuda.manual_seed_all(args.manualSeed)
-
+        torch.cuda.manual_seed_all(seed)
     now = datetime.datetime.now(dateutil.tz.tzlocal())
     timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
+
     output_dir = '../output/%s_%s_%s' % \
-        (CONFIG['DATASET_NAME'], CONFIG['CONFIG_NAME'], timestamp)
+    (CONFIG['DATASET_NAME'], CONFIG['CONFIG_NAME'], timestamp)
 
     split_dir, bshuffle = 'train', True
     if not CONFIG['TRAIN']['FLAG']:
         # bshuffle = False
         split_dir = 'test'
 
-    # Get data loader
     imsize = CONFIG['TREE']['BASE_SIZE'] * (2 ** (CONFIG['TREE']['BRANCH_NUM'] - 1))
     image_transform = transforms.Compose([
         transforms.Scale(int(imsize * 76 / 64)),
         transforms.RandomCrop(imsize),
         transforms.RandomHorizontalFlip()])
+
     dataset = TextDataset(CONFIG['DATA_DIR'], split_dir,
-                          base_size=CONFIG['TREE']['BASE_SIZE'],
-                          transform=image_transform)
-    assert dataset
+                        base_size=CONFIG['TREE']['BASE_SIZE'],
+                        transform=image_transform)
+    
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=CONFIG['TRAIN.BATCH_SIZE'],
+        dataset, batch_size=CONFIG['TRAIN']['BATCH_SIZE'],
         drop_last=True, shuffle=bshuffle, num_workers=int(CONFIG['WORKERS']))
-
-    # Define models and go to train/evaluate
     algo = trainer(output_dir, dataloader, dataset.n_words, dataset.ixtoword)
-
-    start_t = time.time()
     if CONFIG['TRAIN']['FLAG']:
         algo.train()
     else:
@@ -140,3 +116,7 @@ if __name__ == "__main__":
         
         end_t = time.time()
     print('Total time for training:', end_t - start_t)
+
+
+if __name__ == "__main__":
+    main()
