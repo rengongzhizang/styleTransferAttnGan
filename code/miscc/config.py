@@ -4,10 +4,10 @@ from __future__ import print_function
 import os.path as osp
 import numpy as np
 from easydict import EasyDict as edict
-
+from cfg.config import CONFIG
 
 __C = edict()
-cfg = __C
+cfg = edict(CONFIG)
 
 # Dataset name: flowers, birds
 __C.DATASET_NAME = 'birds'
