@@ -5,6 +5,7 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
 'GPU_ID': 0,
 'WORKERS': 4,
 'CUDA' : True,
+'RNN_TYPE' : 'LSTM',
 'B_VALIDATION' : False,
 
 'TREE':{
@@ -21,6 +22,9 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
     'SNAPSHOT_INTERVAL': 5,
     'DISCRIMINATOR_LR': 0.0002,
     'GENERATOR_LR': 0.0002,
+    'FLAG' : True,
+    'RNN_GRAD_CLIP' : 0.25,
+    'B_NET_D' : True,
     #
     'NET_E': '../DAMSMencoders/coco/text_encoder100.pth',
     'SMOOTH':
@@ -36,7 +40,11 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
     'DF_DIM': 96,
     'GF_DIM': 48,
     'Z_DIM': 100,
-    'R_NUM': 3
+    'R_NUM': 3,
+    'CONDITION_DIM' : 100,
+    'R_NUM' : 2,
+    'B_ATTENTION' : True,
+    'B_DCGAN' : False
 },
 
 'TEXT':{
