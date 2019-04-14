@@ -185,9 +185,9 @@ def build_models():
         start_epoch = int(start_epoch) + 1
         print('start_epoch', start_epoch)
     if cfg.CUDA:
-        text_encoder = text_encoder.cuda()
-        image_encoder = image_encoder.cuda()
-        labels = labels.cuda()
+        text_encoder = text_encoder.to('cuda:0')
+        image_encoder = image_encoder.to('cuda:0')
+        labels = labels.to('cuda:0')
 
     return text_encoder, image_encoder, labels, start_epoch
 
