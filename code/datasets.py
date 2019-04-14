@@ -145,7 +145,10 @@ class TextDataset(data.Dataset):
 
     def load_captions(self, data_dir, filenames, mode = 'train'):
         all_captions = []
-        path = data_dir + 'captions_train2014.json'
+        if mode == 'train':
+            path = data_dir + 'captions_train2014.json'
+        else:
+            path = data_dir + 'captions_test2014.json'
         f = open(path, 'r')
             
         caption_dict = json.load(f)
