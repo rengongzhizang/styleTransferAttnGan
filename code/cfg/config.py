@@ -22,7 +22,7 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
     'SNAPSHOT_INTERVAL': 5,
     'DISCRIMINATOR_LR': 0.0002,
     'GENERATOR_LR': 0.0002,
-    'FLAG' : True,
+    'ENCODER_LR' : 0.0002,
     'RNN_GRAD_CLIP' : 0.25,
     'B_NET_D' : True,
     #
