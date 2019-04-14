@@ -38,7 +38,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a DAMSM network')
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
-                        default='cfg/DAMSM/bird.yml', type=str)
+                        default='cfg/DAMSM/coco_attn2.yml', type=str)
     parser.add_argument('--gpu', dest='gpu_id', type=int, default=0)
     parser.add_argument('--data_dir', dest='data_dir', type=str, default='')
     parser.add_argument('--manualSeed', type=int, help='manual seed')
@@ -193,29 +193,13 @@ def build_models():
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    if args.cfg_file is not None:
-        cfg_from_file(args.cfg_file)
 
-    if args.gpu_id == -1:
-        cfg.CUDA = False
-    else:
-        cfg.GPU_ID = args.gpu_id
-
-    if args.data_dir != '':
-        cfg.DATA_DIR = args.data_dir
-    print('Using config:')
-    pprint.pprint(cfg)
-
-    if not cfg.TRAIN.FLAG:
-        args.manualSeed = 100
-    elif args.manualSeed is None:
-        args.manualSeed = random.randint(1, 10000)
-    random.seed(args.manualSeed)
-    np.random.seed(args.manualSeed)
-    torch.manual_seed(args.manualSeed)
+    seed = 485
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     if cfg.CUDA:
-        torch.cuda.manual_seed_all(args.manualSeed)
+        torch.cuda.manual_seed_all(seed)
 
     ##########################################################################
     now = datetime.datetime.now(dateutil.tz.tzlocal())
@@ -227,8 +211,12 @@ if __name__ == "__main__":
     image_dir = os.path.join(output_dir, 'Image')
     mkdir_p(model_dir)
     mkdir_p(image_dir)
-
-    torch.cuda.set_device(cfg.GPU_ID)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    if device.type == 'cuda':
+        torch.cuda.set_device(0)
+    else:
+        torch.cuda.set_device(-1)
     cudnn.benchmark = True
 
     # Get data loader ##################################################
