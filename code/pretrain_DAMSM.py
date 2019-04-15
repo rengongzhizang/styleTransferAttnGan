@@ -271,12 +271,10 @@ if __name__ == "__main__":
             if lr > cfg.TRAIN.ENCODER_LR/10.:
                 lr *= 0.98
 
-            if (epoch % cfg.TRAIN.SNAPSHOT_INTERVAL == 0 or
-                epoch == cfg.TRAIN.MAX_EPOCH):
                 torch.save(image_encoder.state_dict(),
-                           '%s/image_encoder%d.pth' % (model_dir, epoch))
+                           '../output/' + str(epoch) + '_image_encoder.pt')
                 torch.save(text_encoder.state_dict(),
-                           '%s/text_encoder%d.pth' % (model_dir, epoch))
+                           '../output/' + str(epoch) + '_text_encoder.pt')
                 print('Save G/Ds models.')
     except KeyboardInterrupt:
         print('-' * 89)
