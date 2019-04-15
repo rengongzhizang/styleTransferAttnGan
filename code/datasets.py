@@ -25,7 +25,7 @@ from miscc.config import cfg as cfg
 import json
 import re
 def prepare_data(data):
-    imgs, captions, captions_lens, class_ids, keys = data
+    s_code, imgs_style, imgs, captions, captions_lens, class_ids, keys_s, keys = data
 
     # sort data by the length in a decreasing order
     sorted_cap_lens, sorted_cap_indices = \
@@ -51,8 +51,8 @@ def prepare_data(data):
         captions = Variable(captions)
         sorted_cap_lens = Variable(sorted_cap_lens)
 
-    return [real_imgs, captions, sorted_cap_lens,
-            class_ids, keys]
+    return [s_code, imgs_style, real_imgs, captions, sorted_cap_lens,
+            class_ids, keys_s, keys]
 
 
 def get_imgs(img_path, imsize, bbox=None,
@@ -115,7 +115,7 @@ class TextDataset(data.Dataset):
 
         self.filenames, self.captions, self.ixtoword, \
             self.wordtoix, self.n_words = self.load_text_data(data_dir, split)
-
+        self.filenames_s, self.s_code  = self.load_style_image(data_dir, split)
         self.class_id = self.load_class_id(split_dir, len(self.filenames))
         self.number_example = len(self.filenames)
 
@@ -267,6 +267,11 @@ class TextDataset(data.Dataset):
             class_id = np.arange(total_num)
         return class_id
 
+    def load_style_image(self, data_dir):
+        filenames = self.load_style_filenames(data_dir)
+        s_code = self.get_style_code(data_dir, filenames)
+        return filenames, s_code
+    
     def load_filenames(self, data_dir, split):
         cwd = os.getcwd()
         path = os.path.join(data_dir, split) + '/' + '*.jpg'
@@ -292,9 +297,22 @@ class TextDataset(data.Dataset):
             x_len = cfg.TEXT.WORDS_NUM
         return x, x_len
 
-    def __getitem__(self, index):
+    def get_style_code(self, data_dir, filenames):
+        path = data_dir + 'style.json'
+        f = open(path, 'r')
+            
+        style_dict = json.load(f)
+        s_code = np.zeros(len(filenames),1)
+        for i in range(len(filenames)):
+            s_code[i] = style_dict['filenames[i]']
+
+        return s_code
+
+
+    def __getitem__(self, index, index_s):
         #
         key = self.filenames[index]
+        key_s = self.filenames_s[index_s]
         cls_id = self.class_id[index]
         #
         if self.bbox is not None:
@@ -305,13 +323,18 @@ class TextDataset(data.Dataset):
             data_dir = self.data_dir
         #
         img_name = key
+        style_name = '%s/style/%s.jpg' % (data_dir, key_s)
         imgs = get_imgs(img_name, self.imsize,
+                        bbox, self.transform, normalize=self.norm)
+        styles = get_imgs(style_name, self.imsize,
                         bbox, self.transform, normalize=self.norm)
         # random select a sentence
         sent_ix = random.randint(0, self.embeddings_num)
         new_sent_ix = index * self.embeddings_num + sent_ix
         caps, cap_len = self.get_caption(new_sent_ix)
-        return imgs, caps, cap_len, cls_id, key
+        s_code = self.get_style_code(key_s)
+        return s_code, styles, imgs, caps, cap_len, cls_id, key_s, key
+
 
 
     def __len__(self):
