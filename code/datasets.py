@@ -115,7 +115,9 @@ class TextDataset(data.Dataset):
 
         self.filenames, self.captions, self.ixtoword, \
             self.wordtoix, self.n_words = self.load_text_data(data_dir, split)
-        self.filenames_s, self.s_code  = self.load_style_image(data_dir, split)
+        #self.filenames_s, self.s_code  = self.load_style_image(data_dir, split)
+        self.style_name=['Impressionism', 'Realism', 'Romanticism', 'Expressionism', 'Post-Impressionism', 'Art Nouveau (Modern)', 'Baroque', 'Surrealism', 'Symbolism', 'Rococo'] # get style string name
+        self.style_each_number=[8215, 8112, 7037, 5324, 4527, 3775, 3253, 3131, 2626, 2101] # get style image name
         self.class_id = self.load_class_id(split_dir, len(self.filenames))
         self.number_example = len(self.filenames)
 
@@ -267,10 +269,10 @@ class TextDataset(data.Dataset):
             class_id = np.arange(total_num)
         return class_id
 
-    def load_style_image(self, data_dir):
-        filenames = self.load_style_filenames(data_dir)
-        s_code = self.get_style_code(data_dir, filenames)
-        return filenames, s_code
+    #def load_style_image(self, data_dir):
+    #    filenames = self.load_style_filenames(data_dir)
+    #    s_code = self.get_style_code(data_dir, filenames)
+    #    return filenames, s_code
     
     def load_filenames(self, data_dir, split):
         cwd = os.getcwd()
@@ -297,24 +299,25 @@ class TextDataset(data.Dataset):
             x_len = cfg.TEXT.WORDS_NUM
         return x, x_len
 
-    def get_style_code(self, data_dir, filenames):
-        path = data_dir + 'style.json'
-        f = open(path, 'r')
-            
-        style_dict = json.load(f)
-        s_code = np.zeros(len(filenames),1)
-        for i in range(len(filenames)):
-            s_code[i] = style_dict['filenames[i]']
+   # def get_style_code(self, data_dir, filenames):
+   #     path = data_dir + 'style.json'
+   #     f = open(path, 'r')
+   #         
+   #     style_dict = json.load(f)
+   #     s_code = np.zeros(len(filenames),1)
+   #     for i in range(len(filenames)):
+   #         s_code[i] = style_dict['filenames[i]']
+   #
+   #     return s_code
 
-        return s_code
 
-
-    def __getitem__(self, tup):
+    def __getitem__(self, index):
         #
-        index = tup[0]
-        index_s = tup[1]
+        s_code = random.randint(0, 9) # sample style index 0-9
+        sample_s = self.style_name[s_code] # get style string name
+        index_s = random.randint(1, self.style_each_number[s_code]) # get style image name
+        #key_s = self.filenames_s['sample_s'][index_s]
         key = self.filenames[index]
-        key_s = self.filenames_s[index_s]
         cls_id = self.class_id[index]
         #
         if self.bbox is not None:
@@ -325,7 +328,7 @@ class TextDataset(data.Dataset):
             data_dir = self.data_dir
         #
         img_name = key
-        style_name = '%s/style/%s.jpg' % (data_dir, key_s)
+        style_name = '%s/style_dataset/%s/%s.jpg' % (data_dir, sample_s,index_s)
         imgs = get_imgs(img_name, self.imsize,
                         bbox, self.transform, normalize=self.norm)
         styles = get_imgs(style_name, self.imsize,
@@ -334,7 +337,7 @@ class TextDataset(data.Dataset):
         sent_ix = random.randint(0, self.embeddings_num)
         new_sent_ix = index * self.embeddings_num + sent_ix
         caps, cap_len = self.get_caption(new_sent_ix)
-        s_code = self.get_style_code(key_s)
+
         return s_code, styles, imgs, caps, cap_len, cls_id, key_s, key
 
 
