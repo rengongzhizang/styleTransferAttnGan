@@ -2,3 +2,5 @@
 !.gitignore
 coco/
 style_dataset/
+code/.vscode/launch.json
+.DS_Store
