@@ -309,8 +309,10 @@ class TextDataset(data.Dataset):
         return s_code
 
 
-    def __getitem__(self, index, index_s):
+    def __getitem__(self, tup):
         #
+        index = tup[0]
+        index_s = tup[1]
         key = self.filenames[index]
         key_s = self.filenames_s[index_s]
         cls_id = self.class_id[index]
