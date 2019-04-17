@@ -26,7 +26,7 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
     'RNN_GRAD_CLIP' : 0.25,
     'B_NET_D' : True,
     #
-    'NET_E': '',#'../DAMSMencoders/coco/text_encoder100.pth'
+    'NET_E': '../DAMSMencoders/text_encoder5.pth',#'../DAMSMencoders/coco/text_encoder100.pth'
     'SMOOTH':
     {
         'GAMMA1': 4.0,  # 1,2,5 good 4 best  10&100bad
