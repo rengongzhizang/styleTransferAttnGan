@@ -325,8 +325,9 @@ class INIT_STAGE_G(nn.Module):
         :param c_code: batch x cfg.TEXT.EMBEDDING_DIM
         :return: batch x ngf/16 x 64 x 64
         """
-        
+        print(c_code, z_code, s_code)
         c_z_code = torch.cat((c_code, z_code, s_code), 1) # cat a style code
+        
         # state size ngf x 4 x 4
         out_code = self.fc(c_z_code)
         out_code = out_code.view(-1, self.gf_dim, 4, 4)

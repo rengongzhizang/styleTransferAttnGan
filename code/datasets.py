@@ -31,7 +31,7 @@ def prepare_data(data):
     sorted_cap_lens, sorted_cap_indices = \
         torch.sort(captions_lens, 0, True)
 
-    real_imgs = []
+    real_imgs = ls[]
     for i in range(len(imgs)):
         imgs[i] = imgs[i][sorted_cap_indices]
         if cfg.CUDA:
