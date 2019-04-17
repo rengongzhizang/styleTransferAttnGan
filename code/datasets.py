@@ -38,6 +38,9 @@ def prepare_data(data):
             real_imgs.append(Variable(imgs[i]).cuda())
         else:
             real_imgs.append(Variable(imgs[i]))
+    
+    for i in range(len(imgs_style)):
+        imgs_style[i].to(cfg.DEVICE)
 
     captions = captions[sorted_cap_indices].squeeze()
     class_ids = class_ids[sorted_cap_indices].numpy()
@@ -47,7 +50,6 @@ def prepare_data(data):
     if cfg.CUDA:
         captions = Variable(captions).cuda()
         sorted_cap_lens = Variable(sorted_cap_lens).cuda()
-        imgs_style = Variable(imgs_style).cuda()
     else:
         captions = Variable(captions)
         sorted_cap_lens = Variable(sorted_cap_lens)
