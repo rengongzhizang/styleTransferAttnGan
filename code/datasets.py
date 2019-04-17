@@ -51,7 +51,7 @@ def prepare_data(data):
         captions = Variable(captions)
         sorted_cap_lens = Variable(sorted_cap_lens)
 
-    return [s_code, imgs_style, real_imgs, captions, sorted_cap_lens,
+    return [s_code.to(cfg.DEVICE), imgs_style, real_imgs, captions, sorted_cap_lens,
             class_ids, keys]
 
 

@@ -7,6 +7,7 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
 'CUDA' : True,
 'RNN_TYPE' : 'LSTM',
 'B_VALIDATION' : False,
+'DEVICE' : 'cuda:0'
 
 'TREE':{
     'BRANCH_NUM': 3,
