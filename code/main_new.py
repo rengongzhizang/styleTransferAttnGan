@@ -72,6 +72,7 @@ def gen_example(wordtoix, algo):
     algo.gen_example(data_dic)
 
 def main():
+    start_t = time.time()
     seed = 485
     random.seed(seed)
     np.random.seed(seed)
