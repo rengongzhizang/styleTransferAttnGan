@@ -39,10 +39,10 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
 'GAN':{
     'DF_DIM': 96,
     'GF_DIM': 48,
+    'SF_DIM': 1,
     'Z_DIM': 100,
     'R_NUM': 3,
     'CONDITION_DIM' : 100,
-    'R_NUM' : 2,
     'B_ATTENTION' : True,
     'B_DCGAN' : False
 },
