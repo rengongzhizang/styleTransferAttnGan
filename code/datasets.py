@@ -25,7 +25,7 @@ from miscc.config import cfg as cfg
 import json
 import re
 def prepare_data(data):
-    s_code, imgs_style, imgs, captions, captions_lens, class_ids, keys_s, keys = data
+    s_code, imgs_style, imgs, captions, captions_lens, class_ids, keys = data
 
     # sort data by the length in a decreasing order
     sorted_cap_lens, sorted_cap_indices = \
@@ -52,7 +52,7 @@ def prepare_data(data):
         sorted_cap_lens = Variable(sorted_cap_lens)
 
     return [s_code, imgs_style, real_imgs, captions, sorted_cap_lens,
-            class_ids, keys_s, keys]
+            class_ids, keys]
 
 
 def get_imgs(img_path, imsize, bbox=None,
