@@ -338,7 +338,7 @@ class TextDataset(data.Dataset):
         new_sent_ix = index * self.embeddings_num + sent_ix
         caps, cap_len = self.get_caption(new_sent_ix)
 
-        return s_code, styles, imgs, caps, cap_len, cls_id, key_s, key
+        return s_code, styles, imgs, caps, cap_len, cls_id, key
 
 
 
