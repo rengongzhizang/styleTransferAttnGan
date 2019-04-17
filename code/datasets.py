@@ -328,7 +328,7 @@ class TextDataset(data.Dataset):
             data_dir = self.data_dir
         #
         img_name = key
-        style_name = '%s/style_dataset/%s/%s.jpg' % (data_dir, sample_s,index_s)
+        style_name = '../style_dataset/%s/%s.jpg' % (sample_s,index_s)
         imgs = get_imgs(img_name, self.imsize,
                         bbox, self.transform, normalize=self.norm)
         styles = get_imgs(style_name, self.imsize,
