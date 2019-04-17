@@ -47,11 +47,12 @@ def prepare_data(data):
     if cfg.CUDA:
         captions = Variable(captions).cuda()
         sorted_cap_lens = Variable(sorted_cap_lens).cuda()
+        imgs_style = Variable(imgs_style).cuda()
     else:
         captions = Variable(captions)
         sorted_cap_lens = Variable(sorted_cap_lens)
 
-    return [s_code.to(cfg.DEVICE), imgs_style, real_imgs, captions, sorted_cap_lens,
+    return [s_code.to(cfg.DEVICE).float(), imgs_style, real_imgs, captions, sorted_cap_lens,
             class_ids, keys]
 
 
