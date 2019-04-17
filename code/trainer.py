@@ -132,7 +132,8 @@ class condGANTrainer(object):
             for i in range(len(netsD)):
                 netsD[i].cuda()
                 netsDS[i].cuda()
-        return [text_encoder, image_encoder, netG, netsD, netsDS, epoch]
+        _out = [text_encoder, image_encoder, netG, netsD, netsDS, epoch]
+        return _out
 
     def define_optimizers(self, netG, netsD, netsDS):
         optimizersD = []
