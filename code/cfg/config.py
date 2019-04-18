@@ -19,7 +19,7 @@ CONFIG = {'CONFIG_NAME': 'glu-gan2',
     'NET_G': '',  # '../models/coco_AttnGAN2.pth'
     'B_NET_D': True,
     'BATCH_SIZE': 14,  # 32
-    'MAX_EPOCH': 120,
+    'MAX_EPOCH': 500,
     'SNAPSHOT_INTERVAL': 5,
     'DISCRIMINATOR_LR': 0.0002,
     'GENERATOR_LR': 0.0002,

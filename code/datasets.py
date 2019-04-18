@@ -40,7 +40,7 @@ def prepare_data(data):
             real_imgs.append(Variable(imgs[i]))
     
     for i in range(len(imgs_style)):
-        imgs_style[i].to(cfg.DEVICE)
+        imgs_style[i] = imgs_style[i].to(cfg.DEVICE)
 
     captions = captions[sorted_cap_indices].squeeze()
     class_ids = class_ids[sorted_cap_indices].numpy()
@@ -54,7 +54,7 @@ def prepare_data(data):
         captions = Variable(captions)
         sorted_cap_lens = Variable(sorted_cap_lens)
 
-    return [s_code.to(cfg.DEVICE).float(), imgs_style, real_imgs, captions, sorted_cap_lens,
+    return [s_code.to(cfg.DEVICE).float().view(-1,1), imgs_style, real_imgs, captions, sorted_cap_lens,
             class_ids, keys]
 
 

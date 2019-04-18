@@ -1,4 +1,4 @@
 *.pyc
 !.gitignore
-coco/
-style_dataset/
+../coco/
+../style_dataset/
