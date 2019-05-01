@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 
 from PIL import Image
-
+Image.MAX_IMAGE_PIXELS = None
 from miscc.config import cfg
 from miscc.utils import mkdir_p
 from miscc.utils import build_super_images, build_super_images2
@@ -16,7 +16,7 @@ from miscc.utils import weights_init, load_params, copy_G_params
 from model import G_DCGAN, G_NET
 from datasets import prepare_data
 from model import RNN_ENCODER, CNN_ENCODER
-
+import random
 from miscc.losses import words_loss
 from miscc.losses import discriminator_loss, generator_loss, KL_loss
 import os
@@ -246,11 +246,13 @@ class condGANTrainer(object):
         gen_iterations = 0
         # gen_iterations = start_epoch * self.num_batches
         for epoch in range(start_epoch, self.max_epoch):
+        #for epoch in range(start_epoch, 1):
             start_t = time.time()
-
+            print(time.ctime())
             data_iter = iter(self.data_loader)
             step = 0
             while step < self.num_batches:
+            #while step < 10:
                 # reset requires_grad to be trainable for all Ds
                 # self.set_requires_grad_value(netsD, True)
 
@@ -278,13 +280,14 @@ class condGANTrainer(object):
 
                 #######################################################
                 # (3) Update D network
-                ######################################################
+                ######################################################kl
                 errD_total = 0
                 errDS_total = 0
                 D_logs = ''
                 DS_logs = ''
                 for i in range(len(netsD)):
                     netsD[i].zero_grad()
+                    netsDS[i].zero_grad()
                     errD = discriminator_loss(netsD[i], imgs[i], fake_imgs[i],
                                               sent_emb, real_labels, fake_labels)
                     errDS = discriminator_loss(netsDS[i], imgs_style[i], fake_imgs[i],
@@ -340,13 +343,13 @@ class condGANTrainer(object):
             end_t = time.time()
 
             print('''[%d/%d][%d]
-                  Loss_D: %.2f Loss_G: %.2f Time: %.2fs'''
+                  Loss_D: %.2f Loss_DS: %.2f Loss_G: %.2f  Time: %.2fs'''
                   % (epoch, self.max_epoch, self.num_batches,
-                     errD_total.item(), errG_total.item(),
+                     errD_total.item(), errDS_total.item(), errG_total.item(),
                      end_t - start_t))
 
             if epoch % cfg.TRAIN.SNAPSHOT_INTERVAL == 0:  # and epoch != 0:
-                self.save_model(netG, avg_param_G, netsD, epoch)
+                self.save_model(netG, avg_param_G, netsD, netsDS, epoch)
 
         self.save_model(netG, avg_param_G, netsD, netsDS, self.max_epoch)
 
@@ -418,8 +421,8 @@ class condGANTrainer(object):
                         print('step: ', step)
                     # if step > 50:
                     #     break
-
-                    imgs, captions, cap_lens, class_ids, keys = prepare_data(data)
+                    
+                    s_code, imgs_style, imgs, captions, cap_lens, class_ids, keys = prepare_data(data)
 
                     hidden = text_encoder.init_hidden(batch_size)
                     # words_embs: batch_size x nef x seq_len
@@ -483,8 +486,7 @@ class condGANTrainer(object):
             for key in data_dic:
                 save_dir = '%s/%s' % (s_tmp, key)
                 mkdir_p(save_dir)
-                s_code, captions, cap_lens, sorted_indices = data_dic[key]
-
+                captions, cap_lens, sorted_indices = data_dic[key]
                 batch_size = captions.shape[0]
                 nz = cfg.GAN.Z_DIM
                 captions = Variable(torch.from_numpy(captions), volatile=True)
@@ -503,6 +505,10 @@ class condGANTrainer(object):
                     # sent_emb: batch_size x nef
                     words_embs, sent_emb = text_encoder(captions, cap_lens, hidden)
                     mask = (captions == 0)
+                    # prepare style code
+                    s_code=torch.randint(0,9,(batch_size,1)).float().to('cuda:0')
+
+                    #s_code = torch.FloatTensor([0,1,2,3,4,5,6,7,8]).view(batch_size,1).to('cuda:0')
                     #######################################################
                     # (2) Generate fake images
                     ######################################################
@@ -511,7 +517,7 @@ class condGANTrainer(object):
                     # G attention
                     cap_lens_np = cap_lens.cpu().data.numpy()
                     for j in range(batch_size):
-                        save_name = '%s/%d_s_%d' % (save_dir, i, sorted_indices[j])
+                        save_name = '%s/style=%di=%d_s_%d' % (save_dir, int(s_code[j][0]), i, sorted_indices[j])
                         for k in range(len(fake_imgs)):
                             im = fake_imgs[k][j].data.cpu().numpy()
                             im = (im + 1.0) * 127.5

@@ -20,7 +20,7 @@ import dateutil.tz
 import argparse
 import numpy as np
 from PIL import Image
-
+Image.MAX_IMAGE_PIXELS = None
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -60,8 +60,8 @@ def train(dataloader, cnn_model, rnn_model, batch_size,
         # print('step', step)
         rnn_model.zero_grad()
         cnn_model.zero_grad()
-
-        imgs, captions, cap_lens, \
+        
+        _, _, imgs, captions, cap_lens, \
             class_ids, keys = prepare_data(data)
 
 
@@ -136,7 +136,7 @@ def evaluate(dataloader, cnn_model, rnn_model, batch_size):
     s_total_loss = 0
     w_total_loss = 0
     for step, data in enumerate(dataloader, 0):
-        real_imgs, captions, cap_lens, \
+        _, _, real_imgs, captions, cap_lens, \
                 class_ids, keys = prepare_data(data)
 
         words_features, sent_code = cnn_model(real_imgs[-1])

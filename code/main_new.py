@@ -4,7 +4,7 @@ from __future__ import print_function
 from datasets import TextDataset
 from trainer import condGANTrainer as trainer
 from cfg.config import CONFIG
-
+import re
 import os
 import sys
 import time
@@ -14,7 +14,7 @@ import datetime
 import dateutil.tz
 import argparse
 import numpy as np
-
+import json
 import torch
 import torchvision.transforms as transforms
 
@@ -25,17 +25,24 @@ sys.path.append(dir_path)
 def gen_example(wordtoix, algo):
     '''generate images from example sentences'''
     from nltk.tokenize import RegexpTokenizer
-    filepath = '%s/example_filenames.txt' % (CONFIG['DATA_DIR'])
+    filepath = '../Model/example_filenames.txt'
     data_dic = {}
+    path = '../coco/' + 'captions_train2014.json'
+    caption_dict = json.load(open(path,'r'))
+    cd = {}
+    
+    for im in caption_dict['annotations']:
+        cd[im['image_id']] = im['caption']
     with open(filepath, "r") as f:
-        filenames = f.read().decode('utf8').split('\n')
-        for name in filenames:
+        for name in f:
             if len(name) == 0:
                 continue
-            filepath = '%s/%s.txt' % (CONFIG['DATA_DIR'], name)
+            filepath = '../coco/train/' + name.strip()
             with open(filepath, "r") as f:
                 print('Load from:', name)
-                sentences = f.read().decode('utf8').split('\n')
+                im_id = int(re.sub("[^0-9]", "", name)[-6:])
+                sentences = cd[im_id].split('\n')
+                print(sentences)
                 # a list of indices for a sentence
                 captions = []
                 cap_lens = []
@@ -69,11 +76,12 @@ def gen_example(wordtoix, algo):
                 cap_array[i, :c_len] = cap
             key = name[(name.rfind('/') + 1):]
             data_dic[key] = [cap_array, cap_lens, sorted_indices]
+            
     algo.gen_example(data_dic)
 
 def main():
     start_t = time.time()
-    seed = 485
+    seed = 12345
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -115,7 +123,7 @@ def main():
             gen_example(dataset.wordtoix, algo)  # generate images for customized /
             
         
-        end_t = time.time()
+    end_t = time.time()
     print('Total time for training:', end_t - start_t)
 
 

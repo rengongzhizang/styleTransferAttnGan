@@ -174,7 +174,7 @@ def generator_loss(netsD, netsDS, image_encoder, fake_imgs, real_labels,
         cond_logits = netsD[i].COND_DNET(features, sent_emb)
         features_style = netsDS[i](fake_imgs[i])
         cond_logits_style = netsDS[i].COND_DNET(features_style, s_code)
-        cond_errG = nn.BCELoss()(cond_logits, real_labels) + nn.BCELoss()(cond_logits_style, real_labels)
+        cond_errG = nn.BCELoss()(cond_logits, real_labels) + 0.1 * nn.BCELoss()(cond_logits_style, real_labels)
         if netsD[i].UNCOND_DNET is  not None:
             logits = netsD[i].UNCOND_DNET(features)
             errG = nn.BCELoss()(logits, real_labels)
@@ -211,6 +211,8 @@ def generator_loss(netsD, netsDS, image_encoder, fake_imgs, real_labels,
 ##################################################################
 def KL_loss(mu, logvar):
     # -0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+    #print(mu, logvar)
     KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
     KLD = torch.mean(KLD_element).mul_(-0.5)
+    #print(KLD)
     return KLD
